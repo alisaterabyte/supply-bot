@@ -47,9 +47,16 @@ LOCK = asyncio.Lock()
 def init_excel():
     if EXCEL_FILE.exists():
         wb = openpyxl.load_workbook(EXCEL_FILE)
+        changed = False
         if "Usage" not in wb.sheetnames:
             ws2 = wb.create_sheet("Usage")
-            ws2.append(["Date added", "Period", "Product", "Amount", "Unit"])
+            ws2.append(["Date", "Period", "Product", "Amount", "Unit"])
+            changed = True
+        if "History" not in wb.sheetnames:
+            wsh = wb.create_sheet("History")
+            wsh.append(["Date", "User", "Product", "Action", "Old value", "New value", "Unit"])
+            changed = True
+        if changed:
             wb.save(EXCEL_FILE)
         return
     wb = openpyxl.Workbook()
@@ -59,7 +66,9 @@ def init_excel():
     for p in PRODUCTS:
         ws.append([p["name"], p["unit"], 0])
     ws2 = wb.create_sheet("Usage")
-    ws2.append(["Date added", "Period", "Product", "Amount", "Unit"])
+    ws2.append(["Date", "Period", "Product", "Amount", "Unit"])
+    wsh = wb.create_sheet("History")
+    wsh.append(["Date", "User", "Product", "Action", "Old value", "New value", "Unit"])
     wb.save(EXCEL_FILE)
     log.info("Created %s", EXCEL_FILE)
 
@@ -77,15 +86,29 @@ def get_quantities() -> dict:
     return result
 
 
-def update_quantity(product_name: str, new_qty: float):
+def update_quantity(product_name: str, new_qty: float, unit: str,
+                    user: str, action: str, old_qty: float):
     wb = openpyxl.load_workbook(EXCEL_FILE)
     ws = wb["Stock"]
     for row in ws.iter_rows(min_row=2):
         if row[0].value == product_name:
             row[2].value = new_qty
+            wsh = wb["History"]
+            wsh.append([
+                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                user, product_name, action,
+                old_qty, new_qty, unit,
+            ])
             wb.save(EXCEL_FILE)
             return
     raise ValueError(f"Product '{product_name}' not found")
+
+
+def get_history(limit: int = 20) -> list:
+    wb = openpyxl.load_workbook(EXCEL_FILE)
+    ws = wb["History"]
+    rows = [row for row in ws.iter_rows(min_row=2, values_only=True) if any(row)]
+    return rows[-limit:]
 
 
 def add_usage_entry(period: str, product_name: str, amount: str, unit: str) -> bool:
@@ -132,8 +155,9 @@ class Usage(StatesGroup):
 
 def kb_main() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📦 View stock",   callback_data="view")],
-        [InlineKeyboardButton(text="✏️ Update stock", callback_data="update")],
+        [InlineKeyboardButton(text="📦 View stock",      callback_data="view")],
+        [InlineKeyboardButton(text="✏️ Update stock",    callback_data="update")],
+        [InlineKeyboardButton(text="🕓 Change history",  callback_data="history")],
     ])
 
 
@@ -247,6 +271,23 @@ def setup_handlers(dp: Dispatcher) -> None:
             reply_markup=kb_main(),
         )
 
+    @dp.callback_query(F.data == "history")
+    async def cb_history(call: CallbackQuery) -> None:
+        await call.answer()
+        rows = await asyncio.to_thread(get_history, 20)
+        if not rows:
+            text = "🕓 *Change history*\n\nNo changes yet."
+        else:
+            lines = ["🕓 *Change history (last 20):*\n"]
+            for row in reversed(rows):
+                date, user, product, action, old_val, new_val, unit = row
+                lines.append(
+                    f"• `{date}` {user}\n"
+                    f"  {action} *{product}*: {qty_str(float(old_val or 0))} → {qty_str(float(new_val or 0))} {unit}"
+                )
+            text = "\n".join(lines)
+        await call.message.edit_text(text, parse_mode="Markdown", reply_markup=kb_main())
+
     # ── Stock: action/product/quantity ────────────────────────────────────────
 
     @dp.callback_query(F.data.in_({"action_add", "action_sub", "action_set"}))
@@ -301,6 +342,9 @@ def setup_handlers(dp: Dispatcher) -> None:
         action = data["action"]
         product = PRODUCTS[data["product_idx"]]
 
+        user = message.from_user
+        user_label = f"@{user.username}" if user.username else user.full_name
+
         async with LOCK:
             quantities = await asyncio.to_thread(get_quantities)
             current = quantities.get(product["name"], 0)
@@ -309,7 +353,11 @@ def setup_handlers(dp: Dispatcher) -> None:
                 max(0, current - amount) if action == "sub" else
                 amount
             )
-            await asyncio.to_thread(update_quantity, product["name"], new_qty)
+            action_label = {"add": "➕ Add", "sub": "➖ Remove", "set": "🔄 Set"}[action]
+            await asyncio.to_thread(
+                update_quantity, product["name"], new_qty,
+                product["unit"], user_label, action_label, current,
+            )
 
         action_emoji = {"add": "➕", "sub": "➖", "set": "🔄"}[action]
         await message.answer(
