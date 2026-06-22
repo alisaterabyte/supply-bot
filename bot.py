@@ -112,6 +112,11 @@ def update_quantity(product_name: str, new_qty: float, unit: str,
 
 def get_history(limit: int = 20) -> list:
     wb = openpyxl.load_workbook(EXCEL_FILE)
+    if "History" not in wb.sheetnames:
+        wsh = wb.create_sheet("History")
+        wsh.append(["Date", "User", "Product", "Action", "Old value", "New value", "Unit"])
+        wb.save(EXCEL_FILE)
+        return []
     ws = wb["History"]
     rows = [row for row in ws.iter_rows(min_row=2, values_only=True) if any(row)]
     return rows[-limit:]
