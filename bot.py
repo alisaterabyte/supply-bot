@@ -157,7 +157,7 @@ def kb_main() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📦 View stock",      callback_data="view")],
         [InlineKeyboardButton(text="✏️ Update stock",    callback_data="update")],
-        [InlineKeyboardButton(text="🕓 Change history",  callback_data="history")],
+        [InlineKeyboardButton(text="🕓 View history",  callback_data="history")],
     ])
 
 
