@@ -31,18 +31,18 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 EXCEL_FILE = Path(os.environ.get("DATA_DIR", str(Path(__file__).parent))) / "stock.xlsx"
 
 PRODUCTS = [
-    {"name": "SEALING TAPE",           "unit": "box"},
-    {"name": "FOIL BUBBLE MAILERS",    "unit": "box"},
-    {"name": "CARDBOARD SMALL",        "unit": "pallet"},
-    {"name": "PALLET WRAP",            "unit": "box"},
-    {"name": "8X6X4 FOR TEMU",         "unit": "pallet"},
-    {"name": "10X6X6 FOR TEMU",        "unit": "pallet"},
-    {"name": "ICE",                    "unit": "pallet"},
-    {"name": "BUBBLE MAILERS",         "unit": "box"},
-    {"name": "KRAFT PAPER",            "unit": "rolls"},
-    {"name": "SMALL PRINTER STICKERS", "unit": "box"},
-    {"name": "RIBBON STICKERS",        "unit": "rolls"},
-    {"name": "ROLL FILM",              "unit": "kg"},
+    {"name": "FOIL BUBBLE MAILERS",    "unit": "box",    "emoji": "✨"},
+    {"name": "BUBBLE MAILERS",         "unit": "box",    "emoji": "📩"},
+    {"name": "SEALING TAPE",           "unit": "box",    "emoji": "🎀"},
+    {"name": "CARDBOARD SMALL",        "unit": "pallet", "emoji": "📦"},
+    {"name": "PALLET WRAP",            "unit": "box",    "emoji": "🔄"},
+    {"name": "8X6X4 FOR TEMU",         "unit": "pallet", "emoji": "🟫"},
+    {"name": "10X6X6 FOR TEMU",        "unit": "pallet", "emoji": "🟧"},
+    {"name": "ICE",                    "unit": "pallet", "emoji": "🧊"},
+    {"name": "KRAFT PAPER",            "unit": "rolls",  "emoji": "🗞️"},
+    {"name": "SMALL PRINTER STICKERS", "unit": "box",    "emoji": "🏷️"},
+    {"name": "RIBBON STICKERS",        "unit": "rolls",  "emoji": "🎗️"},
+    {"name": "ROLL FILM",              "unit": "kg",     "emoji": "🎬"},
 ]
 
 LOCK = asyncio.Lock()
@@ -184,7 +184,7 @@ def kb_action() -> InlineKeyboardMarkup:
 def kb_products(back_cb: str = "back_action") -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(
-            text=f"{p['name']} ({p['unit']})",
+            text=f"{p['name']} ({p['unit']}) {p['emoji']}",
             callback_data=f"product_{i}",
         )]
         for i, p in enumerate(PRODUCTS)
@@ -226,7 +226,7 @@ def format_stock(quantities: dict) -> str:
     lines = ["📦 *Current stock:*\n"]
     for p in PRODUCTS:
         qty = quantities.get(p["name"], 0)
-        lines.append(f"• {p['name']}: *{qty_str(qty)}* {p['unit']}")
+        lines.append(f"• {p['name']}: *{qty_str(qty)}* {p['unit']} {p['emoji']}")
     return "\n".join(lines)
 
 
