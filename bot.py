@@ -31,18 +31,18 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 EXCEL_FILE = Path(os.environ.get("DATA_DIR", str(Path(__file__).parent))) / "stock.xlsx"
 
 PRODUCTS = [
-    {"name": "FOIL BUBBLE MAILERS",    "unit": "box",    "emoji": "✨"},
-    {"name": "BUBBLE MAILERS",         "unit": "box",    "emoji": "📩"},
-    {"name": "SEALING TAPE",           "unit": "box",    "emoji": "🎀"},
+    {"name": "FOIL BUBBLE MAILERS",    "unit": "box",    "emoji": "✉️"},
+    {"name": "BUBBLE MAILERS",         "unit": "box",    "emoji": "✉️"},
+    {"name": "SEALING TAPE",           "unit": "box",    "emoji": "⚪️"},
     {"name": "CARDBOARD SMALL",        "unit": "pallet", "emoji": "📦"},
     {"name": "PALLET WRAP",            "unit": "box",    "emoji": "🔄"},
     {"name": "8X6X4 FOR TEMU",         "unit": "pallet", "emoji": "🟫"},
     {"name": "10X6X6 FOR TEMU",        "unit": "pallet", "emoji": "🟧"},
     {"name": "ICE",                    "unit": "pallet", "emoji": "🧊"},
-    {"name": "KRAFT PAPER",            "unit": "rolls",  "emoji": "🗞️"},
-    {"name": "SMALL PRINTER STICKERS", "unit": "box",    "emoji": "🏷️"},
-    {"name": "RIBBON STICKERS",        "unit": "rolls",  "emoji": "🎗️"},
-    {"name": "ROLL FILM",              "unit": "kg",     "emoji": "🎬"},
+    {"name": "KRAFT PAPER",            "unit": "rolls",  "emoji": "📜"},
+    {"name": "SMALL PRINTER STICKERS", "unit": "box",    "emoji": "🖨️"},
+    {"name": "RIBBON STICKERS",        "unit": "rolls",  "emoji": "🖨️"},
+    {"name": "ROLL FILM",              "unit": "kg",     "emoji": "⚪️"},
 ]
 
 LOCK = asyncio.Lock()
