@@ -287,17 +287,17 @@ def setup_handlers(dp: Dispatcher) -> None:
         await call.answer()
         rows = await asyncio.to_thread(get_history, 20)
         if not rows:
-            text = "🕓 *Change history*\n\nNo changes yet."
+            text = "🕓 Change history\n\nNo changes yet."
         else:
-            lines = ["🕓 *Change history (last 20):*\n"]
+            lines = ["🕓 Change history (last 20):\n"]
             for row in reversed(rows):
                 date, user, product, action, old_val, new_val, unit = row
                 lines.append(
-                    f"• `{date}` {user}\n"
-                    f"  {action} *{product}*: {qty_str(float(old_val or 0))} → {qty_str(float(new_val or 0))} {unit}"
+                    f"• {date} — {user}\n"
+                    f"  {action} {product}: {qty_str(float(old_val or 0))} → {qty_str(float(new_val or 0))} {unit}"
                 )
             text = "\n".join(lines)
-        await call.message.edit_text(text, parse_mode="Markdown", reply_markup=kb_main())
+        await call.message.edit_text(text, reply_markup=kb_main())
 
     # ── Stock: action/product/quantity ────────────────────────────────────────
 
