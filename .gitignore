@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+start.sh
+SUPPLY_extracted/
+SUPPLY.numbers
+credentials.json
