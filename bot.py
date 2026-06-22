@@ -6,6 +6,12 @@ import asyncio
 import logging
 import os
 from datetime import datetime
+import zoneinfo
+
+NY_TZ = zoneinfo.ZoneInfo("America/New_York")
+
+def now_ny() -> str:
+    return datetime.now(NY_TZ).strftime("%Y-%m-%d %H:%M")
 from pathlib import Path
 
 import openpyxl
@@ -95,7 +101,7 @@ def update_quantity(product_name: str, new_qty: float, unit: str,
             row[2].value = new_qty
             wsh = wb["History"]
             wsh.append([
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                now_ny(),
                 user, product_name, action,
                 old_qty, new_qty, unit,
             ])
@@ -117,11 +123,11 @@ def add_usage_entry(period: str, product_name: str, amount: str, unit: str) -> b
     ws = wb["Usage"]
     for row in ws.iter_rows(min_row=2):
         if row[1].value == period and row[2].value == product_name:
-            row[0].value = datetime.now().strftime("%Y-%m-%d %H:%M")
+            row[0].value = now_ny()
             row[3].value = amount
             wb.save(EXCEL_FILE)
             return False
-    ws.append([datetime.now().strftime("%Y-%m-%d %H:%M"), period, product_name, amount, unit])
+    ws.append([now_ny(), period, product_name, amount, unit])
     wb.save(EXCEL_FILE)
     return True
 
