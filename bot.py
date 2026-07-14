@@ -11,7 +11,7 @@ import zoneinfo
 NY_TZ = zoneinfo.ZoneInfo("America/New_York")
 
 def now_ny() -> str:
-    return datetime.now(NY_TZ).strftime("%Y-%m-%d %H:%M")
+    return datetime.now(NY_TZ).strftime("%B %d %H:%M")
 from pathlib import Path
 
 import openpyxl
