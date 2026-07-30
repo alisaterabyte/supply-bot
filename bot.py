@@ -110,7 +110,7 @@ def update_quantity(product_name: str, new_qty: float, unit: str,
     raise ValueError(f"Product '{product_name}' not found")
 
 
-def get_history(limit: int = 20) -> list:
+def get_history(limit: int = 50, product_filter: str = None) -> list:
     wb = openpyxl.load_workbook(EXCEL_FILE)
     if "History" not in wb.sheetnames:
         wsh = wb.create_sheet("History")
@@ -119,6 +119,8 @@ def get_history(limit: int = 20) -> list:
         return []
     ws = wb["History"]
     rows = [row for row in ws.iter_rows(min_row=2, values_only=True) if any(row)]
+    if product_filter:
+        rows = [r for r in rows if r[2] and product_filter in str(r[2])]
     return rows[-limit:]
 
 
@@ -156,10 +158,14 @@ class Stock(StatesGroup):
 
 
 class Usage(StatesGroup):
-    action = State()      # view or add
+    action = State()
     product = State()
     period = State()
     amount = State()
+
+
+class HistoryFilter(StatesGroup):
+    product = State()
 
 
 # ── Keyboards ─────────────────────────────────────────────────────────────────
@@ -282,22 +288,56 @@ def setup_handlers(dp: Dispatcher) -> None:
             reply_markup=kb_main(),
         )
 
-    @dp.callback_query(F.data == "history")
-    async def cb_history(call: CallbackQuery) -> None:
-        await call.answer()
-        rows = await asyncio.to_thread(get_history, 20)
+    def kb_history() -> InlineKeyboardMarkup:
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔍 Filter by product", callback_data="history_filter")],
+            [InlineKeyboardButton(text="⬅️ Back",              callback_data="back_main")],
+        ])
+
+    def format_history_text(rows: list, title: str) -> str:
         if not rows:
-            text = "🕓 Change history\n\nNo changes yet."
-        else:
-            lines = ["🕓 Change history (last 20):\n"]
-            for row in reversed(rows):
-                date, user, product, action, old_val, new_val, unit = row
-                lines.append(
-                    f"• {date} — {user}\n"
-                    f"  {action} {product}: {qty_str(float(old_val or 0))} → {qty_str(float(new_val or 0))} {unit}"
-                )
-            text = "\n".join(lines)
-        await call.message.edit_text(text, reply_markup=kb_main())
+            return f"🕓 {title}\n\nNo changes yet."
+        lines = [f"🕓 {title}:\n"]
+        for row in reversed(rows):
+            date, user, product, action, old_val, new_val, unit = row
+            lines.append(
+                f"• {date} — {user}\n"
+                f"  {action} {product}: {qty_str(float(old_val or 0))} → {qty_str(float(new_val or 0))} {unit}"
+            )
+        return "\n".join(lines)
+
+    @dp.callback_query(F.data == "history")
+    async def cb_history(call: CallbackQuery, state: FSMContext) -> None:
+        await call.answer()
+        await state.clear()
+        rows = await asyncio.to_thread(get_history, 50)
+        text = format_history_text(rows, "Change history (last 50)")
+        await call.message.edit_text(text, reply_markup=kb_history())
+
+    @dp.callback_query(F.data == "history_filter")
+    async def cb_history_filter(call: CallbackQuery, state: FSMContext) -> None:
+        await call.answer()
+        await state.set_state(HistoryFilter.product)
+        kb = kb_products(back_cb="history")
+        await call.message.edit_text("Select product to filter history:", reply_markup=kb)
+
+    @dp.callback_query(F.data == "history", HistoryFilter.product)
+    async def cb_history_back(call: CallbackQuery, state: FSMContext) -> None:
+        await call.answer()
+        await state.clear()
+        rows = await asyncio.to_thread(get_history, 50)
+        text = format_history_text(rows, "Change history (last 50)")
+        await call.message.edit_text(text, reply_markup=kb_history())
+
+    @dp.callback_query(F.data.startswith("product_"), HistoryFilter.product)
+    async def cb_history_product(call: CallbackQuery, state: FSMContext) -> None:
+        await call.answer()
+        idx = int(call.data.split("_")[1])
+        product = PRODUCTS[idx]
+        await state.clear()
+        rows = await asyncio.to_thread(get_history, 50, product["name"])
+        text = format_history_text(rows, f"History: {product['name']} {product['emoji']}")
+        await call.message.edit_text(text, reply_markup=kb_history())
 
     # ── Stock: action/product/quantity ────────────────────────────────────────
 
